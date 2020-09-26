@@ -1,8 +1,11 @@
-from flask_restful import Api, Resource
+from flask_restful import Api, Resource, reqparse
 from flask import Flask
 import os
 import logging
 import threading
+import json
+from flask_cors import CORS, cross_origin
+
 
 from dbscanner import DBScanner
 import re, csv, sys, configparser
@@ -23,6 +26,9 @@ logging.basicConfig(
 
 app = Flask(__name__)
 api = Api(app)
+# cors = CORS(app)
+# app.config['CORS_HEADERS'] = 'Content-Type'
+CORS(app, resources={r'/*': {'origins': '*'}})
 
 class Health(Resource):
     def get(self):
@@ -52,6 +58,8 @@ def get_data(config):
                 for dim in range(0, config['dim']):
                     point['value'].append(float(row[dim]))
                 data.append(point)
+    print("data")
+    print(data)
     return data
 
 def read_config():
@@ -70,11 +78,46 @@ def main():
     config = read_config()
     dbc = DBScanner(config)
     data = get_data(config)
+    print('data')
+    print(data)
     dbc.dbscan(data)
     dbc.export()
 
 api.add_resource(Health, "/info/health")
 api.add_resource(Calcule, "/calcule")
+
+
+# Flask Endpoints Conf
+
+parser = reqparse.RequestParser();
+parser.add_argument('points', action='append')
+
+config = read_config()
+# Todo
+# shows a single todo item and lets you delete a todo item
+class Point(Resource):
+    def post(self):
+        args = parser.parse_args()
+        data = {'points': args['points']}
+
+
+        def jsonTransformLib(s):
+            return json.loads(str(s).replace("'", '"'))
+        def libTransformDbScan(s):
+            return dict(id = int(s['nro_oc']), value = [float(s['lat']), float(s['lng'])])
+        map_iterator = map(jsonTransformLib, data['points'])
+        output_list = list(map_iterator)
+        lib_iterator = map(libTransformDbScan, output_list)
+        lib_list = list(lib_iterator)
+
+
+        dbc = DBScanner(config)
+        dbc.dbscan(lib_list)
+        # dbc.export()
+        msg = dbc.getData()
+        return msg, 201
+
+api.add_resource(Point, '/points')
 
 if __name__ == "__main__":
     logging.info(' Main: Inicio app', extra={'site': ''})
