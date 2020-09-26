@@ -1,5 +1,5 @@
 from cluster import Cluster
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from scipy.spatial import distance
 from math import radians, cos, sin, asin, sqrt
 
@@ -27,7 +27,7 @@ class DBScanner:
 
         # ax = fig.add_subplot(111, projection = axis_proj)
 
-        #default noise cluster
+        # default noise cluster
         noise = Cluster('Noise', self.dim)
         self.clusters.add(noise)
 

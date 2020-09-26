@@ -8,6 +8,7 @@ from flask_cors import CORS, cross_origin
 
 
 from dbscanner import DBScanner
+from tsp import execTsp
 import re, csv, sys, configparser
 
 CONFIG = configparser.ConfigParser()
@@ -92,15 +93,13 @@ api.add_resource(Calcule, "/calcule")
 parser = reqparse.RequestParser();
 parser.add_argument('points', action='append')
 
-config = read_config()
-# Todo
-# shows a single todo item and lets you delete a todo item
+
+# ------- Point -------
+# Organize Points into clusters
 class Point(Resource):
     def post(self):
         args = parser.parse_args()
         data = {'points': args['points']}
-
-
         def jsonTransformLib(s):
             return json.loads(str(s).replace("'", '"'))
         def libTransformDbScan(s):
@@ -110,14 +109,32 @@ class Point(Resource):
         lib_iterator = map(libTransformDbScan, output_list)
         lib_list = list(lib_iterator)
 
-
+        config = read_config()
         dbc = DBScanner(config)
         dbc.dbscan(lib_list)
-        # dbc.export()
         msg = dbc.getData()
         return msg, 201
 
 api.add_resource(Point, '/points')
+
+# ------- TSP - Route -------
+# Organize Points into clusters
+
+
+parser.add_argument('nodes', action='append')
+
+class Tsp(Resource):
+    def post(self):
+        args = parser.parse_args()
+        data = {'nodes': args['nodes']}
+        def jsonTransformLib(s):
+            return json.loads(str(s).replace("'", '"'))
+        map_iterator = map(jsonTransformLib, data['nodes'])
+        dataModel = list(map_iterator)
+        return execTsp(dataModel), 201
+
+api.add_resource(Tsp, '/tsp')
+
 
 if __name__ == "__main__":
     logging.info(' Main: Inicio app', extra={'site': ''})
