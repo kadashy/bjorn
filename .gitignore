@@ -1,2 +1,4 @@
 .DS*
 *.pyc
+__pycache__
+cluster_dump
