@@ -1,3 +1,8 @@
 mpl-toolkits.clifford
 scipy
 numpy
+requests
+nose2
+Flask
+flask-restful
+waitress

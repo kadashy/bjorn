@@ -1,9 +1,40 @@
+from flask_restful import Api, Resource
+from flask import Flask
+import os
+import logging
+import threading
+
 from dbscanner import DBScanner
 import re, csv, sys, configparser
 
 CONFIG = configparser.ConfigParser()
 CONFIG.read('config')
 DATA = 'data/cordenate.csv'
+
+LOG_LEVEL = {"develop": logging.DEBUG,
+             "test": logging.INFO,
+             "production": logging.WARNING}
+
+# environment = os.getenv('ENVIRONMENT')
+environment = "develop"
+
+logging.basicConfig(
+    level=LOG_LEVEL[environment])
+
+app = Flask(__name__)
+api = Api(app)
+
+class Health(Resource):
+    def get(self):
+        status = {'status': 'up'}, 200
+        logging.debug(status, extra={'site': 'SOCL'})
+        return status
+
+class Calcule(Resource):
+    def get(self):
+        status = {'calculated': 'yes'}, 200
+        main()
+        return status
 
 def get_data(config):
     data = []
@@ -36,12 +67,17 @@ def read_config():
     return config
 
 def main():
-
     config = read_config()
     dbc = DBScanner(config)
     data = get_data(config)
     dbc.dbscan(data)
     dbc.export()
 
+api.add_resource(Health, "/info/health")
+api.add_resource(Calcule, "/calcule")
+
 if __name__ == "__main__":
-    main()
+    logging.info(' Main: Inicio app', extra={'site': ''})
+    from waitress import serve
+    print("Start app")
+    serve(app, host="0.0.0.0", port=8080)
