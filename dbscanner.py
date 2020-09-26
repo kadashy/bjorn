@@ -110,7 +110,7 @@ class DBScanner:
             for cluster in self.clusters:
                 for point in cluster.points:
                     csv_point = ','.join(map(str, point['value']))
-                    dump_file.write("%s;%s\n" % (csv_point, cluster.name))
+                    dump_file.write("%s,%s\n" % (csv_point, cluster.name))
         print ("Cluster dumped at: %s" % export_file)
 
     def init_params(self):
