@@ -51,8 +51,6 @@ class DBScanner:
                     #     ax.scatter(new_cluster.get_X(), new_cluster.get_Y(), new_cluster.get_Z(), marker = 'o',
                     #     c = self.color[self.cluster_count % len(self.color)], label = name)
 
-                    # ax.cla()
-
         # if len(noise.get_points()) != 0:
         #     if self.dim > 2:
         #         ax.scatter(noise.get_X(), noise.get_Y(), noise.get_Z(), marker = 'x', label = noise.name)
