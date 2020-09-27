@@ -1,11 +1,44 @@
 ## Ci/CD para los desarollos de Python 3x en NSR en GitLab
 
 stages:
+  - seting-env
   - build
   - clair
   - publish
   - clean
   - deploy
+
+credentials-prod:
+  image: registrysecaas.azurecr.io/secaas/gcp-sdk:latest
+  stage: seting-env
+  script:
+    - OWNER=$(cat pipeline/ci/.owner)
+    - NSR_GCR_AUTH_OWNED=NSR_GCR_AUTH_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!NSR_GCR_AUTH_OWNED} | base64 -d > gcr_auth.json
+    - gcloud auth activate-service-account --key-file=gcr_auth.json
+    - GCR_PULL_KEY=$(gcloud auth print-access-token)
+    - echo "$GCR_PULL_KEY" > .envmaster
+    - PROJECTID=PROJECT_ID_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!PROJECTID} > .projectidmaster
+    - cat .projectidmaster
+    - CLUSTER_NAME=CLUSTER_NAME_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!CLUSTER_NAME} > .clusternamemaster
+    - CLUSTER_ZONE=CLUSTER_ZONE_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!CLUSTER_ZONE} > .clusterzonemaster
+  only:
+    - master
+  tags:
+    - k8s-runner
+  artifacts:
+    when: always
+    name: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .envmaster
+      - .projectidmaster
+      - .version
+      - .clusternamemaster
+      - .clusterzonemaster
+
 
 clair-analysis:
   stage: clair
