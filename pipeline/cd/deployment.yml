@@ -18,11 +18,16 @@ spec:
       containers:
           image: 'us.gcr.io/{PROJECTID}/{CI_PROJECT_NAME}:{VERSION}'
           name: {APPNAME}
-          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: "http"
               protocol: "TCP"
+          livenessProbe:
+            httpGet:
+              path: /info/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
           resources:
             limits:
               cpu: "512m"
@@ -30,9 +35,3 @@ spec:
             requests:
               cpu: "128m"
               memory: "250Mi"
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 120
-            periodSeconds: 10
