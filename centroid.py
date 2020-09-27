@@ -24,23 +24,6 @@ class Centroid:
             xsum = xsum + float(splited[0])
             ysum = ysum + float(splited[1])
             point[splited[2]] = [[xsum],[ysum]]
-            if index == length :
-                xsum = xsum / length
-                ysum = ysum / length
-                point[splited[2]] = [[xsum],[ysum]]
-                print (xsum)
-                print (ysum)
-                print(point[splited[2]])
-        print(point)
-
-        for input in self.points:
-            length = (len(self.points))
-            splited = input.split(",")
-            index = index + 1
-            # print (index)
-            xsum = xsum + float(splited[0])
-            ysum = ysum + float(splited[1])
-            point[splited[2]] = [[xsum],[ysum]]
 
         print(point)
 
