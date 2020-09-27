@@ -45,7 +45,7 @@ publish:
     - docker push us.gcr.io/$PROJECTID_DEV/"${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION
   allow_failure: true
   only:
-    - test
+    - master
   tags:
     - k8s-runner
 
@@ -56,8 +56,7 @@ build:
     - docker:18.09.7-dind
   script:
     - VERSION=$(cat .version)
-    - GCR_PULL_KEY=$(cat .envtest)
-    - PROJECTID_TEST=$(cat .projectidtest)
+    - GCR_PULL_KEY=$(cat .envmaster)
     - PROJECTID_MASTER=$(cat .projectidmaster)
     - TAGS_GCP=$(cat .tags_gcp)
     # - if [[ "$TAGS_GCP" == "[]" ]]; then  docker push us.gcr.io/"${PROJECTID}"/tmp/"${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION  ; else  echo "Este TAG ya existe:" "${CI_PROJECT_NAME}":"$VERSION"  "NO se publicaran los cambios" && exit 1; fi
