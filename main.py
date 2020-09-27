@@ -11,6 +11,8 @@ from dbscanner import DBScanner
 from tsp import execTsp
 import re, csv, sys, configparser
 
+__version__ = "1.0.0"
+
 CONFIG = configparser.ConfigParser()
 CONFIG.read('config')
 DATA = 'data/cordenate.csv'

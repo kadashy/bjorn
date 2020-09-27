@@ -1,0 +1,134 @@
+## Ci/CD para los desarollos de Python 3x en NSR en GitLab
+
+stages:
+  - seting-env
+  - build
+  - clair
+  - publish
+  - clean
+  - deploy
+
+credentials-prod:
+  image: registrysecaas.azurecr.io/secaas/gcp-sdk:latest
+  stage: seting-env
+  script:
+    - OWNER=$(cat pipeline/ci/.owner)
+    - NSR_GCR_AUTH_OWNED=NSR_GCR_AUTH_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!NSR_GCR_AUTH_OWNED} | base64 -d > gcr_auth.json
+    - gcloud auth activate-service-account --key-file=gcr_auth.json
+    - GCR_PULL_KEY=$(gcloud auth print-access-token)
+    - echo "$GCR_PULL_KEY" > .envmaster
+    - PROJECTID=PROJECT_ID_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!PROJECTID} > .projectidmaster
+    - cat .projectidmaster
+    - CLUSTER_NAME=CLUSTER_NAME_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!CLUSTER_NAME} > .clusternamemaster
+    - CLUSTER_ZONE=CLUSTER_ZONE_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!CLUSTER_ZONE} > .clusterzonemaster
+  only:
+    - master
+  tags:
+    - k8s-runner
+  artifacts:
+    when: always
+    name: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .envmaster
+      - .projectidmaster
+      - .version
+      - .clusternamemaster
+      - .clusterzonemaster
+
+
+clair-analysis:
+  stage: clair
+  image: "registrysecaas.azurecr.io/secaas/clair-tool:latest"
+  services: []
+  variables:
+    CLAIR_URL: "http://clair-secaas.buffetcloud.io:6060"
+    REGISTRY_USER: oauth2accesstoken
+  script:
+    - VERSION=$(cat .version)
+    - PROJECTID=$(cat .projectid${CI_COMMIT_REF_SLUG})
+    - export REGISTRY_PASSWORD=$(cat .envdevelop)
+    - ARTIFACT=us.gcr.io/"${PROJECTID}"/tmp/"${CI_PROJECT_NAME}":"$VERSION"
+    - SCAN_IMAGE=$ARTIFACT clair-tool
+  allow_failure: true
+  only:
+    - develop
+    - test
+    - master
+  tags:
+    - k8s-runner
+
+publish:
+  image: docker:stable-dind
+  stage: publish
+  services:
+    - docker:18.09.7-dind
+  script:
+    - mkdir ~/.docker
+    - echo $DOCKER_AUTH_CONFIG >> ~/.docker/config.json
+    - VERSION=$(cat .version)
+    - GCR_PULL_KEY_DEV=$(cat .envdevelop)
+    - PROJECTID_DEV=$(cat .projectiddevelop)
+    - docker login -u oauth2accesstoken -p $GCR_PULL_KEY_DEV us.gcr.io
+    - docker pull us.gcr.io/$PROJECTID_DEV"/${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION
+    - docker tag us.gcr.io/$PROJECTID_DEV"/${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION   us.gcr.io/$PROJECTID_DEV/"${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION
+    - docker push us.gcr.io/$PROJECTID_DEV/"${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION
+  allow_failure: true
+  only:
+    - master
+  tags:
+    - k8s-runner
+
+build:
+  image: docker:stable-dind
+  stage: build
+  services:
+    - docker:18.09.7-dind
+  script:
+    - VERSION=$(cat .version)
+    - GCR_PULL_KEY=$(cat .envmaster)
+    - PROJECTID_MASTER=$(cat .projectidmaster)
+    - TAGS_GCP=$(cat .tags_gcp)
+    # - if [[ "$TAGS_GCP" == "[]" ]]; then  docker push us.gcr.io/"${PROJECTID}"/tmp/"${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION  ; else  echo "Este TAG ya existe:" "${CI_PROJECT_NAME}":"$VERSION"  "NO se publicaran los cambios" && exit 1; fi
+    - docker login -u oauth2accesstoken -p $GCR_PULL_KEY us.gcr.io
+    - docker pull us.gcr.io/$PROJECTID_TEST/"${CI_PROJECT_NAME}":test-$VERSION
+    - docker tag us.gcr.io/$PROJECTID_TEST/"${CI_PROJECT_NAME}":test-$VERSION   us.gcr.io/$PROJECTID_MASTER/"${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION
+    - GCR_PULL_KEY_MASTER=$(cat .envmaster)
+    - docker login -u oauth2accesstoken -p $GCR_PULL_KEY_MASTER us.gcr.io
+    - docker push us.gcr.io/$PROJECTID_MASTER/"${CI_PROJECT_NAME}":${CI_COMMIT_REF_SLUG}-$VERSION
+  allow_failure: true
+  only:
+    - master
+  tags:
+    - k8s-runner
+
+deploy:
+  image: sodimacdad.azurecr.io/sodimac-dad/docker-kube-gutil:stable
+  stage: deploy
+  script:
+    - export VERSION=$(cat .version)
+    - export PROJECTID=$(cat .projectidmaster)
+    - CLUSTER_NAME=$(cat .clusternamemaster)
+    - CLUSTER_ZONE=$(cat .clusterzonemaster)
+    - OWNER=$(cat pipeline/ci/.owner)
+    - NSR_GKE_AUTH_OWNED=NSR_GKE_AUTH_${OWNER}_${CI_COMMIT_REF_SLUG}
+    - echo ${!NSR_GKE_AUTH_OWNED} | base64 -d > gke_auth.json
+    - export EXTENV=prd
+    - export VARENV=PR
+    - export ENVIRONMENT=prod
+    - export APPNAME=${CI_PROJECT_NAME//-/}
+    - gcloud auth activate-service-account --key-file gke_auth.json
+    - gcloud config set project $PROJECTID
+    - gcloud container clusters get-credentials $CLUSTER_NAME --zone $CLUSTER_ZONE --project $PROJECTID
+    - kubectl apply -f pipeline/cd/deployment.yml
+    - kubectl get pods
+    - kubectl apply -f pipeline/cd/service.yml
+    - kubectl apply -f pipeline/cd/scaling.yml
+    - kubectl get services
+  only:
+    - master
+  tags:
+    - k8s-runner
