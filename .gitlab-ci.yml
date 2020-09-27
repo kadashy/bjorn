@@ -1,40 +1,11 @@
 ## Ci/CD para los desarollos de Python 3x en NSR en GitLab
 
 stages:
-  - validate-version
   - build
   - clair
   - publish
   - clean
   - deploy
-
-validate-version:
-  image: registrysecaas.azurecr.io/secaas/gcp-sdk:latest
-  stage: validate-version
-  script:
-    - OWNER=$(cat pipeline/ci/.owner)
-    - NSR_GCR_AUTH_OWNED=NSR_GCR_AUTH_${OWNER}_${CI_COMMIT_REF_SLUG}
-    - echo ${!NSR_GCR_AUTH_OWNED} | base64 -d > gcr_auth.json
-    - gcloud auth activate-service-account --key-file=gcr_auth.json
-    - PROJECTID=$(cat .projectid${CI_COMMIT_REF_SLUG})
-    - echo $PROJECTID
-    - GCR_PULL_KEY=$(cat .env${CI_COMMIT_REF_SLUG})
-    - VERSION=$(cat .version)
-    - echo $VERSION
-    - TAGS_GCP=$(gcloud container images list-tags --filter="tags:${CI_COMMIT_REF_SLUG}-$VERSION" --format=json us.gcr.io/"${PROJECTID}"/"${CI_PROJECT_NAME}")
-    - echo $TAGS_GCP >> .tags_gcp
-    - echo $TAGS_GCP
-  only:
-    - develop
-    - test
-    - master
-  tags:
-    - k8s-runner
-  artifacts:
-    when: always
-    name: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - .tags_gcp
 
 build-dev:
   image: docker:stable-dind
