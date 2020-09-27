@@ -133,8 +133,8 @@ class Tsp(Resource):
         dataModel = list(map_iterator)
         return execTsp(dataModel), 201
 
-api.add_resource(Tsp, '/tsp')
 
+api.add_resource(Tsp, '/tsp')
 
 if __name__ == "__main__":
     logging.info(' Main: Inicio app', extra={'site': ''})

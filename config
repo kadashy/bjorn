@@ -1,10 +1,10 @@
 [DEFAULT]
 # maximum allowable distance for neighbouring points km
-eps = 1.2
+eps = 1
 
 # minimum number of neighbours surrounding a point
 # to be considered a cluster point
-min_pts = 2
+min_pts = 1
 
 # dimension of the dataset: ex (x,y)=2
 dim = 2
