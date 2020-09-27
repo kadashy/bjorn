@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {APPNAME}
+  name: {CI_PROJECT_NAME}
+  namespace: austral
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {APPNAME}
+  template:
+    metadata:
+      labels:
+        app: {APPNAME}
+    spec:
+      containers:
+          image: 'us.gcr.io/{PROJECTID}/{CI_PROJECT_NAME}:{VERSION}'
+          name: {APPNAME}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: "http"
+              protocol: "TCP"
+          resources:
+            limits:
+              cpu: "512m"
+              memory: "750Mi"
+            requests:
+              cpu: "128m"
+              memory: "250Mi"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 10
