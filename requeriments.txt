@@ -8,3 +8,5 @@ flask-restful
 waitress
 print_function
 ortools
+flask_cors
+
