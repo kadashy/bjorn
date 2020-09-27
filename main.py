@@ -5,8 +5,7 @@ import logging
 import threading
 import json
 from flask_cors import CORS, cross_origin
-
-
+from centroid import Centroid
 from dbscanner import DBScanner
 import re, csv, sys, configparser
 
@@ -83,10 +82,6 @@ def main():
     dbc.dbscan(data)
     dbc.export()
 
-api.add_resource(Health, "/info/health")
-api.add_resource(Calcule, "/calcule")
-
-
 # Flask Endpoints Conf
 
 parser = reqparse.RequestParser();
@@ -100,7 +95,6 @@ class Point(Resource):
         args = parser.parse_args()
         data = {'points': args['points']}
 
-
         def jsonTransformLib(s):
             return json.loads(str(s).replace("'", '"'))
         def libTransformDbScan(s):
@@ -110,14 +104,19 @@ class Point(Resource):
         lib_iterator = map(libTransformDbScan, output_list)
         lib_list = list(lib_iterator)
 
-
+        # print ("DBScanner")
         dbc = DBScanner(config)
         dbc.dbscan(lib_list)
-        # dbc.export()
-        msg = dbc.getData()
-        return msg, 201
+        #dbc.export()
+        # print ("getData")
+        clusters = dbc.getData()
+        centroid = Centroid(clusters)
+        centroid.get_centroide()
+        return clusters, 201
 
-api.add_resource(Point, '/points')
+api.add_resource(Health, "/info/health")
+api.add_resource(Calcule, "/calcule")
+api.add_resource(Point, "/points")
 
 if __name__ == "__main__":
     logging.info(' Main: Inicio app', extra={'site': ''})
